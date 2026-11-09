@@ -1,0 +1,12 @@
+# Virtual environment
+.venv/
+
+# Python and pytest generated files
+__pycache__/
+.pytest_cache/
+
+# Secrets (never commit these)
+.env
+
+# macOS
+.DS_Store
