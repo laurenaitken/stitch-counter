@@ -92,7 +92,7 @@ stitch-counter/
 
 ## Roadmap
 
-- [ ] `expand_pattern()` with tests
+- [X] `expand_pattern()` with tests
 - [ ] `count_stitches()` with tests
 - [ ] Error handling for bad input
 - [ ] v2: nested repeats and "knit to end"
