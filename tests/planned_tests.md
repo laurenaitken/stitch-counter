@@ -6,6 +6,13 @@ Returns list[str] that tells a user what each individual stitch in a row should 
 ## count_stitches(text, starting)
 Returns an int of the final stitch count after completing a row and raises an error if a user runs out of stitches. Leftover stitches are carried over, so starting stitch is added to (stitches made - stitches used).
 
+## Decisions made while building expand_pattern
+- `k2tog` stays one entry: `expand_pattern("k2tog")` returns `['k2tog']`, not two stitches.
+- A stitch with no number counts once: `expand_pattern("k")` returns `['k']`.
+- `yo` is a stitch like `k` and `p`: `expand_pattern("yo k2")` returns `['yo', 'k', 'k']`.
+- Commas, spaces and mixtures of both separate instructions, and case is ignored.
+- Test 12 (unknown abbreviation) and an `x` count with no repeat before it raise `ValueError` already. The other error tests (Tests 3, 6, 7, 13, 14) are still to do.
+
 # Tests
 
 ## Test 1
