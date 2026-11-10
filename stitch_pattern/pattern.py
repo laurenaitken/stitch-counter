@@ -1,43 +1,67 @@
 """Expand knitting pattern text into one list entry per stitch.
 
 Supported syntax:
-    - Stitch abbreviations: ``k`` (knit), ``p`` (purl) and ``k2tog``
-      (knit two together).
+    - Stitch abbreviations: ``k`` (knit), ``p`` (purl), ``yo`` (yarn over) and
+      ``k2tog`` (knit two together).
     - A number after a stitch repeats it, so ``k5`` means five knit stitches.
+      A stitch with no number counts once.
     - ``* ... * xN`` repeats the stitches between the asterisks N times.
     - Commas and spaces both work as separators, and input is not case
       sensitive.
 """
 
+import re
+
+KNOWN_STITCHES = ("k", "p", "yo", "k2tog")
+REPEAT_MARKER = "*"
+REPEAT_COUNT = "x"
+
+# Longest names first, so "k2tog" is matched before "k" reads it as "k2".
+_STITCH_NAMES = "|".join(sorted(KNOWN_STITCHES, key=len, reverse=True))
+_STITCH_PATTERN = re.compile(rf"({_STITCH_NAMES})([0-9]*)")
+_REPEAT_COUNT_PATTERN = re.compile(rf"{REPEAT_COUNT}([0-9]+)")
+
 
 def parse_pattern(text):
-    """Split pattern text into a list of cleaned instructions.
+    """Split pattern text into a list of ``(name, count)`` tokens.
 
     Args:
         text (str): The original pattern text, for example ``"K2, p1"``.
 
     Returns:
-        list: One item per instruction, in the order they appear. Repeat
-        markers (``'*'``) and ``'k2tog'`` are plain strings. Every other
-        instruction is a ``(name, count)`` tuple with a lowercase name, for
-        example ``('k', 2)``. A repeat count such as ``x3`` is the tuple
-        ``('x', 3)``.
+        list[tuple[str, int]]: One token per instruction, in the order they
+        appear, with lowercase names:
+
+        - a stitch is ``(name, count)``, for example ``('k', 2)``. A stitch
+          with no number has a count of 1.
+        - a repeat marker is ``('*', 1)``.
+        - a repeat count such as ``x3`` is ``('x', 3)``.
+
+    Raises:
+        ValueError: If an instruction is not a known stitch, repeat marker or
+            repeat count.
     """
-    text = text.replace("*", " * ")
-    if ',' not in text:
-        split_text = text.split()
-    else:
-        split_text = text.split(',')
+    normalised = text.lower().replace(REPEAT_MARKER, f" {REPEAT_MARKER} ")
+    normalised = normalised.replace(",", " ")
 
-    stitch_tuples = []
-    for instruction in split_text:
-        instruction = instruction.strip()
-        if instruction in ['*', 'k2tog']:
-            stitch_tuples.append(instruction)
-        else:
-            stitch_tuples.append((instruction[0].lower(), int(instruction[1])))
+    tokens = []
+    for piece in normalised.split():
+        if piece == REPEAT_MARKER:
+            tokens.append((REPEAT_MARKER, 1))
+            continue
 
-    return stitch_tuples
+        repeat_count = _REPEAT_COUNT_PATTERN.fullmatch(piece)
+        if repeat_count:
+            tokens.append((REPEAT_COUNT, int(repeat_count.group(1))))
+            continue
+
+        stitch = _STITCH_PATTERN.fullmatch(piece)
+        if stitch is None:
+            raise ValueError(f"Unknown abbreviation: {piece!r}")
+        name, digits = stitch.groups()
+        tokens.append((name, int(digits) if digits else 1))
+
+    return tokens
 
 
 def expand_pattern(text):
@@ -51,39 +75,29 @@ def expand_pattern(text):
         list[str]: One entry per stitch, in knitting order. ``'k2tog'`` counts
         as a single entry, not two stitches.
 
+    Raises:
+        ValueError: If the text contains an unknown abbreviation, or a repeat
+            count (``x3``) with no repeat before it.
+
     Example:
         >>> expand_pattern("k5, p2")
         ['k', 'k', 'k', 'k', 'k', 'p', 'p']
     """
-    stitch_tuples = parse_pattern(text)
-    final_stitch_list = []
-    repeat_started = False
+    stitches = []
+    repeat_group = None
+    inside_repeat = False
 
-    for stitch in stitch_tuples:
-        if stitch == '*':
-            if not repeat_started:
-                repeat_started = True
-                repeated_pattern = []
-
-            else:
-                repeat_started = False
-
-        elif stitch[0] == 'x':
-            repeated_pattern = repeated_pattern * stitch[1]
-            final_stitch_list.extend(repeated_pattern)
-
-        elif stitch == 'k2tog':
-            if repeat_started:
-                repeated_pattern.append(stitch)
-            else:
-                final_stitch_list.append(stitch)
+    for name, count in parse_pattern(text):
+        if name == REPEAT_MARKER:
+            inside_repeat = not inside_repeat
+            if inside_repeat:
+                repeat_group = []
+        elif name == REPEAT_COUNT:
+            if repeat_group is None:
+                raise ValueError(f"Repeat count x{count} has no repeat before it")
+            stitches.extend(repeat_group * count)
         else:
-            count = 0
-            while count < stitch[1]:
-                if repeat_started:
-                    repeated_pattern.append(stitch[0])
-                else:
-                    final_stitch_list.append(stitch[0])
-                count += 1
+            target = repeat_group if inside_repeat else stitches
+            target.extend([name] * count)
 
-    return final_stitch_list
+    return stitches
