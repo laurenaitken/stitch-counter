@@ -38,8 +38,14 @@ def parse_pattern(text):
         - a repeat count such as ``x3`` is ``('x', 3)``.
 
     Raises:
-        ValueError: If an instruction is not a known stitch, repeat marker or
-            repeat count.
+        ValueError: 
+            1. Instruction is not a known stitch, repeat marker or
+            repeat count
+            2. Empty pattern text is entered
+            3. Empty repeat
+            4. Invalid stitch/repeat count
+            5. Repeat count multiplied by 0
+            6. Unclosed asterisks
     """
     if text == "" or text == " ":
         raise ValueError("Pattern empty")
@@ -54,15 +60,20 @@ def parse_pattern(text):
 
         repeat_count = _REPEAT_COUNT_PATTERN.fullmatch(piece)
         if repeat_count:
-            if repeat_count.group(1) == "0":
+            if int(repeat_count.group(1)) == 0:
                 raise ValueError("Cannot repeat by 0")
             tokens.append((REPEAT_COUNT, int(repeat_count.group(1))))
             continue
 
         stitch = _STITCH_PATTERN.fullmatch(piece)
         if stitch is None:
-            raise ValueError(f"Unknown abbreviation: {piece!r}")
+            if any(piece.startswith(name) for name in KNOWN_STITCHES):
+                raise ValueError("Invalid count")
+            else:
+                raise ValueError(f"Unknown abbreviation: {piece!r}")
         name, digits = stitch.groups()
+        if digits and int(digits) == 0:
+            raise ValueError("Invalid count")
         tokens.append((name, int(digits) if digits else 1))
 
     return tokens
@@ -96,6 +107,9 @@ def expand_pattern(text):
             inside_repeat = not inside_repeat
             if inside_repeat:
                 repeat_group = []
+            else:
+                if len(repeat_group) == 0:
+                    raise ValueError("Empty repeat")
         elif name == REPEAT_COUNT:
             if repeat_group is None:
                 raise ValueError(f"Repeat count x{count} has no repeat before it")
@@ -103,5 +117,7 @@ def expand_pattern(text):
         else:
             target = repeat_group if inside_repeat else stitches
             target.extend([name] * count)
+    if inside_repeat:
+        raise ValueError("Missing opening/closing asterisk")
 
     return stitches

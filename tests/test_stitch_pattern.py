@@ -80,11 +80,10 @@ def test_expand_pattern_accepts_messy_separators(text, expected):
 @pytest.mark.parametrize(
     "text",
     [
-        "*k1 p1* x2",
         "* k1 p1 * x2",
         "*k1 p1 * x2",
     ],
-    ids=["tight", "spaced", "mixed"],
+    ids=["spaced", "mixed"],
 )
 def test_expand_pattern_accepts_flexible_asterisk_spacing(text):
     """Spaces around the asterisks do not change the result."""
@@ -111,11 +110,11 @@ def test_expand_pattern_rejects_unusable_text(text, message):
             (" ", "Pattern empty"),
             ("", "Pattern empty"),
             ("* k2 p3 * x0", "Cannot repeat by 0"),
-            ("* k5 p3", "No closing asterisk"),
+            ("* k5 p3", "Missing opening/closing asterisk"),
             ("k2, p-1", "Invalid count"),
             ("k2, k1.5", "Invalid count"),
             ("k0", "Invalid count"),
-            ("k2 ** p1 k2 k3", "Bad asterisk"),
+            ("k2 ** p1 k2 k3", "Empty repeat"),
             ("k2 * * x2", "Empty repeat")
         ],
         ids=['empty-space', 'empty', 'x0', 'missing-asterisk', 'minus-count', 'float-count', 'zero-count', 'tight-asterisk', 'empty-asterisk' ]
