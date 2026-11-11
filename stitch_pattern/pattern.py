@@ -41,6 +41,8 @@ def parse_pattern(text):
         ValueError: If an instruction is not a known stitch, repeat marker or
             repeat count.
     """
+    if text == "" or text == " ":
+        raise ValueError("Pattern empty")
     normalised = text.lower().replace(REPEAT_MARKER, f" {REPEAT_MARKER} ")
     normalised = normalised.replace(",", " ")
 
