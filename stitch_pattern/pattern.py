@@ -54,6 +54,8 @@ def parse_pattern(text):
 
         repeat_count = _REPEAT_COUNT_PATTERN.fullmatch(piece)
         if repeat_count:
+            if repeat_count.group(1) == "0":
+                raise ValueError("Cannot repeat by 0")
             tokens.append((REPEAT_COUNT, int(repeat_count.group(1))))
             continue
 
