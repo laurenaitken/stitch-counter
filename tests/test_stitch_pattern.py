@@ -103,3 +103,23 @@ def test_expand_pattern_rejects_unusable_text(text, message):
     """Text that cannot be expanded raises a ValueError with a clear message."""
     with pytest.raises(ValueError, match=message):
         expand_pattern(text)
+
+
+@pytest.mark.parametrize(
+        "text, message",
+        [
+            (" ", "Pattern empty"),
+            ("", "Pattern empty"),
+            ("* k2 p3 * x0", "Cannot repeat by 0"),
+            ("* k5 p3", "No closing asterisk"),
+            ("k2, p-1", "Invalid count"),
+            ("k2, k1.5", "Invalid count"),
+            ("k0", "Invalid count"),
+            ("k2 ** p1 k2 k3", "Bad asterisk"),
+            ("k2 * * x2", "Empty repeat")
+        ],
+        ids=['empty-space', 'empty', 'x0', 'missing-asterisk', 'minus-count', 'float-count', 'zero-count', 'tight-asterisk', 'empty-asterisk' ]
+)
+def test_invalid_input_raises_value_error(text, message):
+    with pytest.raises(ValueError, match=message):
+        expand_pattern(text)
